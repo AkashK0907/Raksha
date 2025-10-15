@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raksha - Elderly Care App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- Welcome Screen -->
+    <div id="welcomeScreen" class="min-h-full gradient-bg flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl card-shadow p-8 w-full max-w-md text-center">
+            <div class="mb-8">
+                <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <span class="text-white text-3xl font-bold">R</span>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-800 mb-2" data-translate="welcomeTitle">Raksha</h1>
+                <p class="text-gray-600" data-translate="welcomeSubtitle">Your trusted elderly care companion</p>
+            </div>
+            
+            <div class="space-y-4">
+                <button onclick="showLogin()" class="w-full btn-primary text-white py-4 rounded-2xl font-semibold text-lg" data-translate="loginBtn">
+                    Login
+                </button>
+                <button onclick="showRegister()" class="w-full bg-white border-2 border-purple-500 text-purple-600 py-4 rounded-2xl font-semibold text-lg hover:bg-purple-50" data-translate="registerBtn">
+                    Register
+                </button>
+                <button onclick="showCaretakerLogin()" class="w-full bg-gray-100 text-gray-700 py-4 rounded-2xl font-semibold text-lg hover:bg-gray-200" data-translate="caretakerLoginBtn">
+                    Login as Caretaker
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="hidden min-h-full gradient-bg flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl card-shadow p-8 w-full max-w-md">
+            <button onclick="showWelcome()" class="mb-6 text-gray-600 hover:text-gray-800" data-translate="back">
+                ← Back
+            </button>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center" data-translate="loginTitle">Login</h2>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-6">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2" data-translate="phoneLabel">Phone Number</label>
+                    <input type="tel" id="loginPhone" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" oninput="validatePhoneInput(this)" onkeypress="return isNumber(event)" class="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg" data-translate="phonePlaceholder" placeholder="Enter 10-digit phone number" required>
+                </div>
+                
+                <button type="submit" class="w-full btn-primary text-white py-4 rounded-2xl font-semibold text-lg" data-translate="loginSubmitBtn">
+                    Login
+                </button>
+                
+                <button type="button" onclick="showOTPLogin()" class="w-full bg-gray-100 text-gray-700 py-4 rounded-2xl font-semibold text-lg hover:bg-gray-200" data-translate="otpLoginBtn">
+                    Login via OTP
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Register Screen -->
+    <div id="registerScreen" class="hidden min-h-full gradient-bg flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl card-shadow p-8 w-full max-w-md">
+            <button onclick="showWelcome()" class="mb-6 text-gray-600 hover:text-gray-800">
+                ← Back
+            </button>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Register</h2>
+            
+            <form onsubmit="handleRegister(event)" class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Full Name</label>
+                    <input type="text" id="regName" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Age</label>
+                        <input type="number" id="regAge" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" min="1" max="120" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Gender</label>
+                        <select id="regGender" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" required>
+                            <option value="">Select</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Phone Number</label>
+                    <input type="tel" id="regPhone" maxlength="10" pattern="[0-9]{10}" inputmode="numeric" oninput="validatePhoneInput(this)" onkeypress="return isNumber(event)" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="Enter 10-digit phone number" required>
+                </div>
+                
+                <button type="submit" class="w-full btn-primary text-white py-4 rounded-2xl font-semibold text-lg">
+                    Register
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- OTP Verification Screen -->
+    <div id="otpScreen" class="hidden min-h-full gradient-bg flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl card-shadow p-8 w-full max-w-md text-center">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Verify OTP</h2>
+            <p class="text-gray-600 mb-6">Enter the 6-digit code sent to your phone</p>
+            
+            <div class="flex justify-center space-x-2 mb-6">
+                <input type="tel" maxlength="1" pattern="[0-9]" inputmode="numeric" class="otp-input w-12 h-12 text-center border border-gray-300 rounded-lg text-xl font-bold focus:ring-2 focus:ring-purple-500" oninput="handleOTPInput(this, 0)" onkeydown="handleOTPKeydown(this, 0)" onkeypress="return isNumber(event)">
+                <input type="tel" maxlength="1" pattern="[0-9]" inputmode="numeric" class="otp-input w-12 h-12 text-center border border-gray-300 rounded-lg text-xl font-bold focus:ring-2 focus:ring-purple-500" oninput="handleOTPInput(this, 1)" onkeydown="handleOTPKeydown(this, 1)" onkeypress="return isNumber(event)">
+                <input type="tel" maxlength="1" pattern="[0-9]" inputmode="numeric" class="otp-input w-12 h-12 text-center border border-gray-300 rounded-lg text-xl font-bold focus:ring-2 focus:ring-purple-500" oninput="handleOTPInput(this, 2)" onkeydown="handleOTPKeydown(this, 2)" onkeypress="return isNumber(event)">
+                <input type="tel" maxlength="1" pattern="[0-9]" inputmode="numeric" class="otp-input w-12 h-12 text-center border border-gray-300 rounded-lg text-xl font-bold focus:ring-2 focus:ring-purple-500" oninput="handleOTPInput(this, 3)" onkeydown="handleOTPKeydown(this, 3)" onkeypress="return isNumber(event)">
+                <input type="tel" maxlength="1" pattern="[0-9]" inputmode="numeric" class="otp-input w-12 h-12 text-center border border-gray-300 rounded-lg text-xl font-bold focus:ring-2 focus:ring-purple-500" oninput="handleOTPInput(this, 4)" onkeydown="handleOTPKeydown(this, 4)" onkeypress="return isNumber(event)">
+                <input type="tel" maxlength="1" pattern="[0-9]" inputmode="numeric" class="otp-input w-12 h-12 text-center border border-gray-300 rounded-lg text-xl font-bold focus:ring-2 focus:ring-purple-500" oninput="handleOTPInput(this, 5)" onkeydown="handleOTPKeydown(this, 5)" onkeypress="return isNumber(event)">
+            </div>
+            
+            <button onclick="verifyOTP()" class="w-full btn-primary text-white py-4 rounded-2xl font-semibold text-lg mb-4">
+                Verify OTP
+            </button>
+            
+            <button onclick="resendOTP()" class="text-purple-600 hover:text-purple-800 font-medium">
+                Resend OTP
+            </button>
+        </div>
+    </div>
+
+    <!-- Permissions Screen -->
+    <div id="permissionsScreen" class="hidden min-h-full gradient-bg flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl card-shadow p-8 w-full max-w-md text-center">
+            <div class="w-16 h-16 bg-yellow-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <span class="text-yellow-600 text-2xl">🔒</span>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Allow Permissions</h2>
+            <p class="text-gray-600 mb-8">We need these permissions to provide you the best care</p>
+            
+            <div class="space-y-4 mb-8">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">📍</span>
+                        <span class="font-medium">Location</span>
+                    </div>
+                    <button id="locationBtn" onclick="requestLocationPermission()" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm">Allow</button>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">🔔</span>
+                        <span class="font-medium">Notifications</span>
+                    </div>
+                    <button id="notificationBtn" onclick="requestNotificationPermission()" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm">Allow</button>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                    <div class="flex items-center">
+                        <span class="text-2xl mr-3">💾</span>
+                        <span class="font-medium">Storage</span>
+                    </div>
+                    <button id="storageBtn" onclick="requestStoragePermission()" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm">Allow</button>
+                </div>
+            </div>
+            
+            <button onclick="showProfileSetup()" class="w-full btn-primary text-white py-4 rounded-2xl font-semibold text-lg">
+                Continue
+            </button>
+        </div>
+    </div>
+
+    <!-- Profile Setup Screen -->
+    <div id="profileSetupScreen" class="hidden min-h-full gradient-bg flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl card-shadow p-8 w-full max-w-md">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Profile Setup</h2>
+            
+            <form onsubmit="handleProfileSetup(event)" class="space-y-4">
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 text-sm">Name</label>
+                        <input type="text" id="profileName" class="w-full p-3 border border-gray-300 rounded-xl text-sm" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 text-sm">Age</label>
+                        <input type="number" id="profileAge" class="w-full p-3 border border-gray-300 rounded-xl text-sm" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2 text-sm">Gender</label>
+                        <input type="text" id="profileGender" class="w-full p-3 border border-gray-300 rounded-xl text-sm" readonly>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Blood Group</label>
+                    <select id="bloodGroup" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" required>
+                        <option value="">Select Blood Group</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Health Conditions</label>
+                    <div id="healthConditions" class="space-y-2">
+                        <input type="text" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Enter health condition">
+                    </div>
+                    <button type="button" onclick="addHealthCondition()" class="mt-2 text-purple-600 hover:text-purple-800 font-medium text-sm">+ Add another condition</button>
+                </div>
+                
+                <div class="border-t pt-4">
+                    <h3 class="font-medium text-gray-700 mb-3">Family Doctor (Optional)</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <input type="text" id="doctorName" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Doctor's Name">
+                        <input type="tel" id="doctorPhone" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Phone Number">
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full btn-primary text-white py-4 rounded-2xl font-semibold text-lg">
+                    Continue
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Caretaker Screen -->
+    <div id="caretakerScreen" class="hidden min-h-full gradient-bg flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl card-shadow p-8 w-full max-w-md">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">Add Caretaker</h2>
+            <p class="text-gray-600 text-center mb-6">Add at least one caretaker for emergency contacts</p>
+            
+            <form onsubmit="handleAddCaretaker(event)" class="space-y-4">
+                <div id="caretakersList">
+                    <div class="caretaker-form border-2 border-dashed border-gray-300 rounded-xl p-4 mb-4">
+                        <h3 class="font-medium text-gray-700 mb-3">Caretaker 1 (Required)</h3>
+                        <div class="space-y-3">
+                            <input type="text" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Full Name" required>
+                            <input type="tel" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Phone Number" required>
+                            <input type="email" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Email Address" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="button" onclick="addAnotherCaretaker()" class="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200">
+                    + Add Another Caretaker (Optional)
+                </button>
+                
+                <button type="submit" class="w-full btn-primary text-white py-4 rounded-2xl font-semibold text-lg">
+                    Complete Setup
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Home Screen -->
+    <div id="homeScreen" class="hidden min-h-full bg-gray-50">
+        <!-- Header -->
+        <div class="gradient-bg text-white p-6 rounded-b-3xl">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center mr-3">
+                        <span class="text-white text-xl font-bold">R</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold" data-translate="homeTitle">Raksha</h1>
+                        <p class="text-white text-opacity-80 text-sm" data-translate="homeSubtitle">Your safety companion</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <button onclick="toggleLanguageDropdown()" class="bg-white bg-opacity-20 p-2 rounded-lg flex items-center">
+                            <span class="text-sm">🌐 <span id="currentLanguage">EN</span></span>
+                        </button>
+                        <div id="languageDropdown" class="hidden absolute top-12 right-0 bg-white rounded-lg shadow-lg border border-gray-200 min-w-32 z-50">
+                            <button style="color: black;" onclick="selectLanguage('EN', 'English')" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-t-lg">🇺🇸 English</button>
+                            <button style="color: black;" onclick="selectLanguage('HI', 'Hindi')" class="w-full text-left px-4 py-2 hover:bg-gray-100">🇮🇳 Hindi</button>
+                            <button style="color: black;" onclick="selectLanguage('KN', 'Kannada')" class="w-full text-left px-4 py-2 hover:bg-gray-100 rounded-b-lg">🇮🇳 Kannada</button>
+                        </div>
+                    </div>
+                    <button onclick="toggleVoiceAssistant()" class="bg-white bg-opacity-20 p-2 rounded-lg">
+                        <span class="text-xl">🎤</span>
+                    </button>
+                    <button onclick="showProfile()" class="bg-white bg-opacity-20 p-2 rounded-lg">
+                        <span class="text-xl">👤</span>
+                    </button>
+                </div>
+            </div>
+            <div class="text-center">
+                <p class="text-lg"><span data-translate="helloUser">Hello</span>, <span id="userName">User</span>!</p>
+                <p class="text-white text-opacity-80 text-sm" data-translate="stayMessage">Stay safe and healthy</p>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="p-6">
+            <!-- Emergency Button -->
+            <div class="mb-8">
+                <button onclick="showEmergencyConfirm()" class="w-full emergency-btn text-white py-8 rounded-3xl font-bold text-2xl card-shadow">
+                    🚨 <span data-translate="emergencyBtn">EMERGENCY</span>
+                    <div class="text-sm font-normal mt-1" data-translate="emergencySubtext">Tap for immediate help</div>
+                </button>
+            </div>
+
+            <!-- Feature Buttons Grid -->
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="showReminders()" class="feature-btn text-white p-6 rounded-2xl card-shadow text-center">
+                    <div class="text-3xl mb-2">💊</div>
+                    <div class="font-semibold" data-translate="reminders">Reminders</div>
+                    <div class="text-xs opacity-80" data-translate="remindersSubtext">Medicine & Checkups</div>
+                </button>
+
+                <button onclick="showNearbyPlaces()" class="feature-btn text-white p-6 rounded-2xl card-shadow text-center">
+                    <div class="text-3xl mb-2">🏥</div>
+                    <div class="font-semibold" data-translate="nearby">Nearby</div>
+                    <div class="text-xs opacity-80" data-translate="nearbySubtext">Hospitals & Stores</div>
+                </button>
+
+                <button onclick="showFindNurse()" class="feature-btn text-white p-6 rounded-2xl card-shadow text-center">
+                    <div class="text-3xl mb-2">👩‍⚕️</div>
+                    <div class="font-semibold" data-translate="findNurse">Find Nurse</div>
+                    <div class="text-xs opacity-80" data-translate="findNurseSubtext">Verified Nurses</div>
+                </button>
+
+                <button onclick="showHealthStatus()" class="feature-btn text-white p-6 rounded-2xl card-shadow text-center">
+                    <div class="text-3xl mb-2">📊</div>
+                    <div class="font-semibold" data-translate="healthStatus">Health Status</div>
+                    <div class="text-xs opacity-80" data-translate="healthStatusSubtext">Your Health Info</div>
+                </button>
+
+                <button onclick="showCaretakers()" class="feature-btn text-white p-6 rounded-2xl card-shadow text-center">
+                    <div class="text-3xl mb-2">👥</div>
+                    <div class="font-semibold" data-translate="caretakers">Caretakers</div>
+                    <div class="text-xs opacity-80" data-translate="caretakersSubtext">Linked Contacts</div>
+                </button>
+
+                <button onclick="showUploadRecords()" class="feature-btn text-white p-6 rounded-2xl card-shadow text-center">
+                    <div class="text-3xl mb-2">📄</div>
+                    <div class="font-semibold" data-translate="records">Records</div>
+                    <div class="text-xs opacity-80" data-translate="recordsSubtext">Upload Documents</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Emergency Confirmation Modal -->
+    <div id="emergencyModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-3xl p-8 w-full max-w-sm text-center">
+            <div class="text-6xl mb-4">🚨</div>
+            <h2 class="text-2xl font-bold text-red-600 mb-4" data-translate="emergencyAlertTitle">Emergency Alert</h2>
+            <p class="text-gray-600 mb-6" data-translate="emergencyAlertText">This will immediately contact your caretakers and emergency services with your location.</p>
+            
+            <div class="space-y-3">
+                <button onclick="confirmEmergency()" class="w-full bg-red-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-red-600" data-translate="yesCallHelp">
+                    YES, CALL FOR HELP
+                </button>
+                <button onclick="cancelEmergency()" class="w-full bg-gray-200 text-gray-700 py-4 rounded-2xl font-semibold hover:bg-gray-300" data-translate="cancel">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feature Screens -->
+    <div id="featureScreen" class="hidden min-h-full bg-gray-50">
+        <div class="gradient-bg text-white p-6 rounded-b-3xl">
+            <div class="flex items-center mb-4">
+                <button onclick="showHome()" class="mr-4 text-white hover:text-gray-200" data-translate="back">
+                    ← Back
+                </button>
+                <h1 id="featureTitle" class="text-2xl font-bold">Feature</h1>
+            </div>
+        </div>
+        
+        <div id="featureContent" class="p-6">
+            <!-- Dynamic content will be loaded here -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98cab50ba1c5bdd5',t:'MTc2MDE0NzQzMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
