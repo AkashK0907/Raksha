@@ -38,6 +38,8 @@ const UserSchema = new mongoose.Schema({
     otp: String,
     otpExpires: Date,
     bloodGroup: String,
+    weight: { type: Number },
+    height: { type: Number },
     healthConditions: [String],
     doctor: {
         name: String,
