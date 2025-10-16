@@ -2,7 +2,7 @@
         const API_URL = 'http://localhost:5000/api/auth';
         let currentUser = null;
         let isFirstTimeUser = false;
-        let caretakerCount = 1;
+        let caretakerCount = 1; 
         let profileSetupData = {};
 
         // Navigation functions
@@ -70,27 +70,25 @@
         }
 
         // Authentication handlers
-        // This function becomes async to use 'await'
         async function handleLogin(event) {
             event.preventDefault();
             const phone = document.getElementById('loginPhone').value;
-        
+
             try {
                 // Send a POST request to your backend's login endpoint
                 const response = await fetch(`${API_URL}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone }) // Send the phone number in the body
+                    body: JSON.stringify({ phone }) // Send just the phone number
                 });
             
                 const data = await response.json();
             
-                // If the server returns an error (like user not found), show it
                 if (!response.ok) {
                     throw new Error(data.message || 'Login failed.');
                 }
             
-                // Success! The server has sent the OTP.
+                // Success! The server sent the OTP.
                 // Save the phone number so the verifyOTP function knows who is verifying.
                 localStorage.setItem('phoneForVerification', phone);
                 isFirstTimeUser = false; // This is a login, not a new registration
@@ -102,52 +100,57 @@
         }
 
         async function handleRegister(event) {
-        event.preventDefault();
-        const name = document.getElementById('regName').value;
-        const age = document.getElementById('regAge').value;
-        const gender = document.getElementById('regGender').value;
-        const phone = document.getElementById('regPhone').value;
+            event.preventDefault();
+            const firstName = document.getElementById('regFirstName').value;
+            const lastName = document.getElementById('regLastName').value;
+            const name = `${firstName} ${lastName}`; // Combine first and last name
+            const age = document.getElementById('regAge').value;
+            const gender = document.getElementById('regGender').value;
+            const phone = document.getElementById('regPhone').value;
 
-        try {
-            const response = await fetch(`${API_URL}/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, age, gender, phone })
-            });
+            // Temporarily save details to pre-fill the profile setup page later
+            localStorage.setItem('tempUserForSetup', JSON.stringify({ name, age, gender }));
 
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || 'Registration failed.');
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, age, gender, phone })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.message || 'Registration failed.');
+                }
+            
+                // Success! The server sent the OTP.
+                // Save the phone number to use it on the OTP screen.
+                localStorage.setItem('phoneForVerification', phone);
+                isFirstTimeUser = true;
+                showOTPLogin();
+
+            } catch (error) {
+                alert(`Error: ${error.message}`);
             }
-
-            // Success! The server has sent the OTP.
-            // Temporarily save the phone number to use it for verification.
-            localStorage.setItem('phoneForVerification', phone);
-            isFirstTimeUser = true; // Still useful for the UI flow
-            showOTPLogin();
-
-        } catch (error) {
-            alert(`Error: ${error.message}`);
         }
-    }
-
 
         async function verifyOTP() {
-            const otpInputs = document.querySelectorAll('.otp-input');
-            let otp = '';
-            otpInputs.forEach(input => otp += input.value);
+            // Get the OTP from the input fields
+            let otp = Array.from(document.querySelectorAll('.otp-input')).map(input => input.value).join('');
 
             if (otp.length !== 6) {
                 return alert('Please enter the complete 6-digit OTP');
             }
-        
+
+            // Get the phone number we saved from the previous screen
             const phone = localStorage.getItem('phoneForVerification');
             if (!phone) {
-                alert('Could not find phone number. Please try logging in again.');
+                alert('Error: Phone number not found. Please try logging in again.');
                 return showLogin();
             }
         
             try {
+                // Send the phone number and OTP to the backend for verification
                 const response = await fetch(`${API_URL}/verify-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -155,22 +158,24 @@
                 });
 
                 const data = await response.json();
+            
                 if (!response.ok) {
                     throw new Error(data.message || 'OTP verification failed.');
                 }
             
-                // --- SUCCESS! USER IS LOGGED IN ---
-                // The backend sent back a token. This is the user's login key. Save it!
+                // --- AUTHENTICATION SUCCESS ---
+                // The backend sent back a token. Save it! This is your login key.
                 localStorage.setItem('authToken', data.token); 
 
-                // Save user info for display purposes
-                localStorage.setItem('currentUser', JSON.stringify(data.user)); 
+                // Save the user object for display purposes
+                localStorage.setItem('currentUser', JSON.stringify(data.user));
                 currentUser = data.user; // Also update the global variable
             
-                // Clean up the temporary phone number
+                // Clean up temporary data
                 localStorage.removeItem('phoneForVerification');
+                localStorage.removeItem('tempUserForSetup');
             
-                // Continue the app flow based on server data
+                // Continue the app flow based on the user's status from the server
                 if (!data.user.isSetupComplete) {
                     showPermissions();
                 } else {
@@ -182,37 +187,36 @@
             }
         }
 
-        // This function also becomes async
         async function resendOTP() {
-            // Get the phone number the user is currently trying to verify
-            const phone = localStorage.getItem('phoneForVerification');
-        
-            if (!phone) {
-                alert('Error: Could not find phone number. Please go back and try again.');
-                return;
-            }
-        
-            try {
-                // Just like in handleLogin, call the /login endpoint again
-                const response = await fetch(`${API_URL}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone })
-                });
+        // Get the phone number the user is currently trying to verify
+        const phone = localStorage.getItem('phoneForVerification');
             
-                const data = await response.json();
-            
-                if (!response.ok) {
-                    throw new Error(data.message || 'Failed to resend OTP.');
-                }
-            
-                // Let the user know a new code is on its way
-                alert('A new OTP has been sent to your phone.');
-            
-            } catch (error) {
-                alert(`Error: ${error.message}`);
-            }
+        if (!phone) {
+            alert('Error: Could not find your phone number. Please go back and try again.');
+            return;
         }
+    
+        try {
+            // Just like in handleLogin, call the /login endpoint again to trigger a new OTP
+            const response = await fetch(`${API_URL}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone })
+            });
+        
+            const data = await response.json();
+        
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to resend OTP.');
+            }
+        
+            // Let the user know a new code is on its way
+            alert('A new OTP has been sent to your phone.');
+        
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    }
 
         // Permission handlers
         function requestLocationPermission() {
@@ -272,20 +276,21 @@
             container.appendChild(input);
         }
 
-        // This function no longer needs to be async
         function handleProfileSetup(event) {
             event.preventDefault();
 
             const healthConditionInputs = document.querySelectorAll('#healthConditions input');
             const healthConditions = Array.from(healthConditionInputs)
                                           .map(input => input.value.trim())
-                                          .filter(condition => condition); // Collect only non-empty conditions
-        
+                                          .filter(condition => condition); // Collects only non-empty conditions
+
             // Store the data in our global variable instead of localStorage
             profileSetupData = {
                 bloodGroup: document.getElementById('bloodGroup').value,
                 healthConditions: healthConditions,
-                doctor: { // Backend expects a 'doctor' object
+                weight: document.getElementById('weight').value,
+                height: document.getElementById('height').value,
+                doctor: { // Your backend expects a 'doctor' object
                     name: document.getElementById('doctorName').value,
                     phone: document.getElementById('doctorPhone').value
                 }
@@ -319,10 +324,9 @@
             caretakerCount--;
         }
 
-        // This function must now be async
         async function handleAddCaretaker(event) {
             event.preventDefault();
-        
+                
             // 1. Get the JWT token from localStorage. This proves the user is logged in.
             const token = localStorage.getItem('authToken');
             if (!token) {
@@ -374,7 +378,7 @@
             
                 // 5. Success! Update the local user data and go to the home screen
                 alert(data.message); // e.g., "Profile setup complete!"
-                
+
                 // Update the stored user object with the complete data from the server
                 localStorage.setItem('currentUser', JSON.stringify(data.user));
                 currentUser = data.user;
@@ -385,7 +389,7 @@
                 alert(`Error: ${error.message}`);
             }
         }
-        
+
         // Emergency functions
         function showEmergencyConfirm() {
             document.getElementById('emergencyModal').classList.remove('hidden');
@@ -475,19 +479,55 @@
             
             let medicineHTML = '';
             savedReminders.forEach((reminder, index) => {
+                // Check if reminder should be reset based on frequency
+                const shouldReset = checkIfShouldReset(reminder);
+                if (shouldReset) {
+                    reminder.taken = false;
+                    reminder.takenTimes = [];
+                }
+                
                 const statusClass = reminder.taken ? 'bg-green-50' : 'bg-yellow-50';
                 const buttonClass = reminder.taken ? 'bg-gray-400' : 'bg-orange-500 hover:bg-orange-600';
                 const buttonText = reminder.taken ? 'Taken' : 'Mark Taken';
                 
-                medicineHTML += `
-                    <div class="flex justify-between items-center p-3 ${statusClass} rounded-xl">
-                        <div>
-                            <div class="font-medium">${reminder.name}</div>
-                            <div class="text-sm text-gray-600">${reminder.time} ${reminder.frequency}</div>
+                // Handle multiple checkboxes for "Twice Daily"
+                let checkboxesHTML = '';
+                if (reminder.frequency === 'Twice Daily') {
+                    const takenTimes = reminder.takenTimes || [];
+                    checkboxesHTML = `
+                        <div class="flex gap-2 mt-1">
+                            <label class="flex items-center text-xs">
+                                <input type="checkbox" ${takenTimes.includes(0) ? 'checked' : ''} 
+                                    onchange="toggleDoseTaken(${index}, 0)" class="mr-1">
+                                Morning
+                            </label>
+                            <label class="flex items-center text-xs">
+                                <input type="checkbox" ${takenTimes.includes(1) ? 'checked' : ''} 
+                                    onchange="toggleDoseTaken(${index}, 1)" class="mr-1">
+                                Evening
+                            </label>
                         </div>
-                        <button onclick="markMedicineTaken(${index})" class="${buttonClass} text-white px-4 py-2 rounded-lg text-sm" ${reminder.taken ? 'disabled' : ''}>
-                            ${buttonText}
-                        </button>
+                    `;
+                }
+                
+                const imageHTML = reminder.image ? 
+                    `<button onclick="viewMedicineImage('${reminder.image}')" class="text-blue-500 hover:text-blue-700 text-xs ml-2">📷 View Photo</button>` : '';
+                
+                medicineHTML += `
+                    <div class="flex justify-between items-center p-3 ${statusClass} rounded-xl mb-2">
+                        <div class="flex-1">
+                            <div class="font-medium">${reminder.name} ${imageHTML}</div>
+                            <div class="text-sm text-gray-600">${reminder.time} • ${reminder.frequency}</div>
+                            ${checkboxesHTML}
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="markMedicineTaken(${index})" class="${buttonClass} text-white px-4 py-2 rounded-lg text-sm" ${reminder.taken ? 'disabled' : ''}>
+                                ${buttonText}
+                            </button>
+                            <button onclick="deleteReminder(${index})" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm">
+                                🗑️
+                            </button>
+                        </div>
                     </div>
                 `;
             });
@@ -539,6 +579,11 @@
                                 <option value="Weekly">Weekly</option>
                                 <option value="As Needed">As Needed</option>
                             </select>
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2 text-sm">Tablet Picture (Optional)</label>
+                                <input type="file" id="medicineImage" accept="image/*" class="w-full p-3 border border-gray-300 rounded-xl text-sm">
+                                <p class="text-xs text-gray-500 mt-1">Upload photo to easily identify the tablet</p>
+                            </div>
                             <div class="flex space-x-3">
                                 <button type="submit" class="flex-1 bg-blue-500 text-white py-3 rounded-xl font-semibold">Add</button>
                                 <button type="button" onclick="closeAddMedicineModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold">Cancel</button>
@@ -554,6 +599,7 @@
                         <form onsubmit="addHealthCheckup(event)" class="space-y-4">
                             <input type="text" id="checkupName" placeholder="Checkup Name" class="w-full p-3 border border-gray-300 rounded-xl" required>
                             <input type="date" id="checkupDate" class="w-full p-3 border border-gray-300 rounded-xl" required>
+                            <input type="text" id="hospitalName" placeholder="Hospital Name (Optional)" class="w-full p-3 border border-gray-300 rounded-xl">
                             <div class="flex space-x-3">
                                 <button type="submit" class="flex-1 bg-purple-500 text-white py-3 rounded-xl font-semibold">Add</button>
                                 <button type="button" onclick="closeAddCheckupModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold">Cancel</button>
@@ -863,59 +909,54 @@
                     </div>
                 </div>
             `;
-                    showFeature('Upload Records', content);
-                }
-            
-        function showProfile() {
-            // 1. Get the complete user object saved after login or profile setup
-            const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-                
-            // If for some reason user data isn't found, handle it gracefully
-            if (!user || !user.name) {
-                alert("Could not load user data. Please log in again.");
-                return showLogin();
-            }
-        
-            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
+            showFeature('Upload Records', content);
+        }
 
-            // 2. Extract data directly from the user object (the structure matches your DB model)
-            const bloodGroup = user.bloodGroup || 'Not Set';
-            const healthConditions = user.healthConditions || [];
-            const doctorName = user.doctor ? user.doctor.name : 'Not Set';
-            const doctorPhone = user.doctor ? user.doctor.phone : 'Not Set';
-        
+        function showProfile() {
+            const user = currentUser || JSON.parse(localStorage.getItem('registeredUser') || '{}');
+            const profileData = JSON.parse(localStorage.getItem('profileData') || '{}');
+            
+            const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
+            const bloodGroup = profileData.bloodGroup || 'Not Set';
+            const healthConditions = profileData.healthConditions || [];
+            const doctorName = profileData.doctorName || 'Not Set';
+            const doctorPhone = profileData.doctorPhone || 'Not Set';
+            
             let healthConditionsHTML = '';
             if (healthConditions.length > 0) {
                 healthConditions.forEach(condition => {
                     if (condition.trim()) {
-                        healthConditionsHTML += `<div class="text-sm bg-blue-50 text-blue-800 px-2 py-1 rounded mb-1">${condition}</        div>`;
+                        healthConditionsHTML += `<div class="text-sm bg-blue-50 text-blue-800 px-2 py-1 rounded mb-1">${condition}</div>`;
                     }
                 });
             } else {
                 healthConditionsHTML = '<div class="text-sm text-gray-500">No conditions recorded</div>';
             }
-
-            // 3. Build the HTML content with the correct data
+            
             const content = `
                 <div class="space-y-4">
                     <div class="bg-white rounded-2xl p-6 card-shadow text-center">
-                        <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center      justify-center">
-                    <span class="text-white text-2xl font-bold">${initials}</span>
+                        <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                            <span class="text-white text-2xl font-bold">${initials}</span>
                         </div>
-                        <h2 class="text-2xl font-bold text-gray-800">${user.name}</h2>
-                        <p class="text-gray-600">${user.age} years old • ${user.gender.charAt(0).toUpperCase() + user.gender.slice(1)}</        p>
+                        <h2 class="text-2xl font-bold text-gray-800">${user.name || 'User'}</h2>
+                        <p class="text-gray-600">${user.age || 'N/A'} years old • ${user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : 'N/A'}</p>
                     </div>
-
+                    
                     <div class="bg-white rounded-2xl p-6 card-shadow">
                         <h3 class="font-bold text-lg mb-4">Contact Information</h3>
                         <div class="space-y-3">
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Phone</span>
-                                <span class="font-medium">${user.phone}</span>
+                                <span class="font-medium">${user.phone || 'Not Set'}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Email</span>
+                                <span class="font-medium">${user.email || 'Not Set'}</span>
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="bg-white rounded-2xl p-6 card-shadow">
                         <h3 class="font-bold text-lg mb-4">Health Information</h3>
                         <div class="space-y-3">
@@ -925,11 +966,13 @@
                             </div>
                             <div>
                                 <span class="text-gray-600">Health Conditions</span>
-                                <div class="mt-2">${healthConditionsHTML}</div>
+                                <div class="mt-2">
+                                    ${healthConditionsHTML}
+                                </div>
                             </div>
                         </div>
                     </div>
-
+                    
                     <div class="bg-white rounded-2xl p-6 card-shadow">
                         <h3 class="font-bold text-lg mb-4">Family Doctor</h3>
                         <div class="space-y-2">
@@ -937,8 +980,11 @@
                             <div class="text-gray-600">${doctorPhone}</div>
                         </div>
                     </div>
-
+                    
                     <div class="space-y-3">
+                        <button onclick="showEditProfile()" class="w-full btn-primary text-white py-4 rounded-2xl font-semibold">
+                            Edit Profile
+                        </button>
                         <button onclick="logout()" class="w-full bg-red-500 hover:bg-red-600 text-white py-4 rounded-2xl font-semibold">
                             Logout
                         </button>
@@ -2010,23 +2056,27 @@
             const name = document.getElementById('medicineName').value;
             const time = document.getElementById('medicineTime').value;
             const frequency = document.getElementById('medicineFrequency').value;
+            const imageFile = document.getElementById('medicineImage').files[0];
             
-            const reminders = JSON.parse(localStorage.getItem('medicineReminders') || '[]');
-            reminders.push({ 
-                name, 
-                time, 
-                frequency, 
-                taken: false, 
-                notifiedToday: false,
-                createdDate: new Date().toISOString()
-            });
-            localStorage.setItem('medicineReminders', JSON.stringify(reminders));
+            if (imageFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    saveReminder(e.target.result);
+                };
+                reader.readAsDataURL(imageFile);
+            } else {
+                saveReminder(null);
+            }
             
-            closeAddMedicineModal();
-            showReminders(); // Refresh the view
-            
-            const lang = translations[currentLanguage];
-            showSuccessToast(lang.reminderAdded || 'Medicine reminder added successfully!');
+            function saveReminder(image) {
+                const reminders = JSON.parse(localStorage.getItem('medicineReminders') || '[]');
+                reminders.push({ name, time, frequency, image, taken: false, notifiedToday: false, createdDate: new Date().toISOString() });
+                localStorage.setItem('medicineReminders', JSON.stringify(reminders));
+                closeAddMedicineModal();
+                showReminders();
+                const lang = translations[currentLanguage];
+                showSuccessToast(lang.reminderAdded || 'Medicine reminder added successfully!');
+            }
         }
 
         function markMedicineTaken(index) {
@@ -2051,13 +2101,14 @@
             event.preventDefault();
             const name = document.getElementById('checkupName').value;
             const date = document.getElementById('checkupDate').value;
+            const hospital = document.getElementById('hospitalName').value;
             
             const checkups = JSON.parse(localStorage.getItem('healthCheckups') || '[]');
-            checkups.push({ name, date });
+            checkups.push({ name, date, hospital });
             localStorage.setItem('healthCheckups', JSON.stringify(checkups));
             
             closeAddCheckupModal();
-            showReminders(); // Refresh the view
+            showReminders();
         }
 
         // Health condition management functions
@@ -2361,7 +2412,7 @@
                 currentUser = null;
                 localStorage.removeItem('authToken'); // This is the most important line
                 localStorage.removeItem('currentUser');
-                
+
                 // Go back to the main welcome screen
                 showWelcome();
             }
@@ -2516,6 +2567,393 @@
             if (popup) {
                 popup.remove();
             }
+        }
+
+        // NEW FUNCTIONALITY: Check if reminder should reset based on frequency
+        function checkIfShouldReset(reminder) {
+            if (!reminder.lastResetDate) {
+                return false;
+            }
+            
+            const lastReset = new Date(reminder.lastResetDate);
+            const now = new Date();
+            
+            if (reminder.frequency === 'Daily' || reminder.frequency === 'Twice Daily') {
+                // Reset daily at midnight
+                return lastReset.toDateString() !== now.toDateString();
+            } else if (reminder.frequency === 'Weekly') {
+                // Reset weekly (check if 7 days have passed)
+                const daysSinceReset = Math.floor((now - lastReset) / (1000 * 60 * 60 * 24));
+                return daysSinceReset >= 7;
+            }
+            
+            return false;
+        }
+        
+        // NEW FUNCTIONALITY: Handle twice daily dose tracking
+        function toggleDoseTaken(index, doseNumber) {
+            const reminders = JSON.parse(localStorage.getItem('medicineReminders') || '[]');
+            if (!reminders[index]) return;
+            
+            const reminder = reminders[index];
+            reminder.takenTimes = reminder.takenTimes || [];
+            
+            const doseIndex = reminder.takenTimes.indexOf(doseNumber);
+            if (doseIndex > -1) {
+                reminder.takenTimes.splice(doseIndex, 1);
+                reminder.taken = false;
+            } else {
+                reminder.takenTimes.push(doseNumber);
+                // Mark as completely taken if both doses are checked
+                if (reminder.takenTimes.length >= 2) {
+                    reminder.taken = true;
+                }
+            }
+            
+            reminder.lastResetDate = new Date().toISOString();
+            reminders[index] = reminder;
+            localStorage.setItem('medicineReminders', JSON.stringify(reminders));
+            showReminders(); // Refresh view
+        }
+        
+        // NEW FUNCTIONALITY: Delete reminder
+        function deleteReminder(index) {
+            if (confirm('Are you sure you want to delete this reminder?')) {
+                const reminders = JSON.parse(localStorage.getItem('medicineReminders') || '[]');
+                reminders.splice(index, 1);
+                localStorage.setItem('medicineReminders', JSON.stringify(reminders));
+                showReminders(); // Refresh view
+                showSuccessToast('Reminder deleted successfully!');
+            }
+        }
+        
+        // NEW FUNCTIONALITY: View medicine image
+        function viewMedicineImage(imageData) {
+            const imageModal = `
+                <div id="medicineImageModal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50" onclick="closeMedicineImageModal()">
+                    <div class="bg-white rounded-3xl p-6 w-full max-w-md">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold">Medicine Photo</h3>
+                            <button onclick="closeMedicineImageModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                        </div>
+                        <img src="${imageData}" alt="Medicine photo" class="w-full h-auto rounded-xl">
+                        <button onclick="closeMedicineImageModal()" class="w-full mt-4 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', imageModal);
+        }
+        
+        function closeMedicineImageModal() {
+            const modal = document.getElementById('medicineImageModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        // UPDATED: Show profile with height and weight
+        function showProfile() {
+            // 1. Get the complete user object that was saved after login.
+            const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                
+            // If for some reason user data isn't found, handle it gracefully.
+            if (!user || !user.name) {
+                alert("Could not load user data. Please log in again.");
+                return showLogin();
+            }
+        
+            // 2. Extract data directly from the single 'user' object.
+            const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+            const bloodGroup = user.bloodGroup || 'Not Set';
+            const healthConditions = user.healthConditions || [];
+            const doctorName = user.doctor ? user.doctor.name : 'Not Set';
+            const doctorPhone = user.doctor ? user.doctor.phone : 'Not Set';
+            const weight = user.weight || 'Not Set'; // Assumes you add weight to the model
+            const height = user.height || 'Not Set'; // Assumes you add height to the model
+        
+            let healthConditionsHTML = '';
+            if (healthConditions.length > 0) {
+                healthConditions.forEach(condition => {
+                    if (condition.trim()) {
+                        healthConditionsHTML += `<div class="text-sm bg-blue-50 text-blue-800 px-2 py-1 rounded mb-1">${condition}</div>`;
+                    }
+                });
+            } else {
+                healthConditionsHTML = '<div class="text-sm text-gray-500">No conditions recorded</div>';
+            }
+            
+            // 3. Build the HTML content with the correct data.
+            const content = `
+                <div class="space-y-4">
+                    <div class="bg-white rounded-2xl p-6 card-shadow text-center">
+                        <div class="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
+                            <span class="text-white text-2xl font-bold">${initials}</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-gray-800">${user.name}</h2>
+                        <p class="text-gray-600">${user.age} years old • ${user.gender.charAt(0).toUpperCase() + user.gender.slice(1)}</p>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 card-shadow">
+                        <h3 class="font-bold text-lg mb-4">Contact Information</h3>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Phone</span>
+                            <span class="font-medium">${user.phone}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 card-shadow">
+                        <h3 class="font-bold text-lg mb-4">Health Information</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Blood Group</span>
+                                <span class="font-medium">${bloodGroup}</span>
+                            </div>
+                             <div class="flex justify-between">
+                                <span class="text-gray-600">Weight</span>
+                                <span class="font-medium">${weight} ${weight !== 'Not Set' ? 'kg' : ''}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Height</span>
+                                <span class="font-medium">${height} ${height !== 'Not Set' ? 'cm' : ''}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Health Conditions</span>
+                                <div class="mt-2">${healthConditionsHTML}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 card-shadow">
+                        <h3 class="font-bold text-lg mb-4">Family Doctor</h3>
+                        <div class="font-medium">${doctorName}</div>
+                        <div class="text-gray-600">${doctorPhone}</div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <button onclick="logout()" class="w-full bg-red-500 hover:bg-red-600 text-white py-4 rounded-2xl font-semibold">
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            `;
+            showFeature('Profile', content);
+        }
+        
+        // UPDATED: Enhanced nearby places with booking functionality
+        function showNearbyPlaces() {
+            const content = `
+                <div class="space-y-4">
+                    <div class="bg-white rounded-2xl p-6 card-shadow">
+                        <h3 class="font-bold text-lg mb-4">🏥 Nearby Hospitals</h3>
+                        <div class="space-y-3">
+                            <div class="p-3 border border-gray-200 rounded-xl">
+                                <div class="font-medium">City General Hospital</div>
+                                <div class="text-sm text-gray-600">2.3 km away • Emergency Available</div>
+                                <div class="text-xs text-green-600 mb-2">✅ Open 24/7</div>
+                                <button onclick="bookAppointment('City General Hospital', 'hospital')" class="w-full bg-blue-500 text-white py-2 rounded-lg text-sm hover:bg-blue-600">
+                                    📅 Book Appointment
+                                </button>
+                            </div>
+                            <div class="p-3 border border-gray-200 rounded-xl">
+                                <div class="font-medium">Medicare Clinic</div>
+                                <div class="text-sm text-gray-600">1.8 km away • General Practice</div>
+                                <div class="text-xs text-green-600 mb-2">✅ Open until 8 PM</div>
+                                <button onclick="bookAppointment('Medicare Clinic', 'hospital')" class="w-full bg-blue-500 text-white py-2 rounded-lg text-sm hover:bg-blue-600">
+                                    📅 Book Appointment
+                                </button>
+                            </div>
+                            <div class="p-3 border border-gray-200 rounded-xl">
+                                <div class="font-medium">Apollo Hospitals</div>
+                                <div class="text-sm text-gray-600">3.5 km away • Multi-specialty</div>
+                                <div class="text-xs text-green-600 mb-2">✅ Open 24/7</div>
+                                <button onclick="bookAppointment('Apollo Hospitals', 'hospital')" class="w-full bg-blue-500 text-white py-2 rounded-lg text-sm hover:bg-blue-600">
+                                    📅 Book Appointment
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 card-shadow">
+                        <h3 class="font-bold text-lg mb-4">💊 Medical Stores</h3>
+                        <div class="space-y-3">
+                            <div class="p-3 border border-gray-200 rounded-xl">
+                                <div class="font-medium">Apollo Pharmacy</div>
+                                <div class="text-sm text-gray-600">0.8 km away</div>
+                                <div class="text-xs text-green-600 mb-2">✅ Open 24/7</div>
+                                <button onclick="bookAppointment('Apollo Pharmacy', 'pharmacy')" class="w-full bg-purple-500 text-white py-2 rounded-lg text-sm hover:bg-purple-600">
+                                    📋 Request Visit
+                                </button>
+                            </div>
+                            <div class="p-3 border border-gray-200 rounded-xl">
+                                <div class="font-medium">MedPlus</div>
+                                <div class="text-sm text-gray-600">1.2 km away</div>
+                                <div class="text-xs text-orange-600 mb-2">⏰ Closes at 10 PM</div>
+                                <button onclick="bookAppointment('MedPlus', 'pharmacy')" class="w-full bg-purple-500 text-white py-2 rounded-lg text-sm hover:bg-purple-600">
+                                    📋 Request Visit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-2xl p-6 card-shadow">
+                        <button onclick="searchHospitals()" class="w-full bg-green-500 text-white py-3 rounded-xl font-semibold hover:bg-green-600">
+                            🔍 Search More Hospitals
+                        </button>
+                    </div>
+                </div>
+            `;
+            showFeature('Nearby Places', content);
+        }
+        
+        // NEW FUNCTIONALITY: Book appointment
+        function bookAppointment(facilityName, type) {
+            const appointmentModal = `
+                <div id="appointmentModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div class="bg-white rounded-3xl p-6 w-full max-w-md">
+                        <h3 class="text-xl font-bold mb-4">Book Appointment</h3>
+                        <div class="mb-4">
+                            <div class="font-medium text-lg">${facilityName}</div>
+                            <div class="text-sm text-gray-600">${type === 'hospital' ? '🏥 Hospital' : '💊 Medical Store'}</div>
+                        </div>
+                        
+                        <form onsubmit="confirmAppointment(event, '${facilityName}', '${type}')" class="space-y-4">
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">Patient Name</label>
+                                <input type="text" id="patientName" class="w-full p-3 border border-gray-300 rounded-xl" required>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">Phone Number</label>
+                                <input type="tel" id="appointmentPhone" maxlength="10" pattern="[0-9]{10}" class="w-full p-3 border border-gray-300 rounded-xl" required>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">Preferred Date</label>
+                                <input type="date" id="appointmentDate" class="w-full p-3 border border-gray-300 rounded-xl" required>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">Preferred Time</label>
+                                <input type="time" id="appointmentTime" class="w-full p-3 border border-gray-300 rounded-xl" required>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-medium mb-2">Reason for Visit (Optional)</label>
+                                <textarea id="appointmentReason" rows="3" class="w-full p-3 border border-gray-300 rounded-xl" placeholder="Brief description of your concern"></textarea>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button type="submit" class="flex-1 bg-blue-500 text-white py-3 rounded-xl font-semibold hover:bg-blue-600">Confirm Booking</button>
+                                <button type="button" onclick="closeAppointmentModal()" class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', appointmentModal);
+            
+            // Pre-fill with user data
+            const user = currentUser || JSON.parse(localStorage.getItem('registeredUser') || '{}');
+            if (user.name) document.getElementById('patientName').value = user.name;
+            if (user.phone) document.getElementById('appointmentPhone').value = user.phone;
+        }
+        
+        function closeAppointmentModal() {
+            const modal = document.getElementById('appointmentModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        function confirmAppointment(event, facilityName, type) {
+            event.preventDefault();
+            
+            const appointment = {
+                facility: facilityName,
+                type: type,
+                patientName: document.getElementById('patientName').value,
+                phone: document.getElementById('appointmentPhone').value,
+                date: document.getElementById('appointmentDate').value,
+                time: document.getElementById('appointmentTime').value,
+                reason: document.getElementById('appointmentReason').value,
+                bookedOn: new Date().toISOString()
+            };
+            
+            // Save appointment
+            const appointments = JSON.parse(localStorage.getItem('appointments') || '[]');
+            appointments.push(appointment);
+            localStorage.setItem('appointments', JSON.stringify(appointments));
+            
+            closeAppointmentModal();
+            
+            // Show confirmation
+            alert(`✅ Appointment Booked Successfully!\n\n📍 ${facilityName}\n📅 ${appointment.date} at ${appointment.time}\n\nYou will receive a confirmation call shortly.`);
+            showSuccessToast('Appointment booked successfully!');
+        }
+        
+        function searchHospitals() {
+            const searchModal = `
+                <div id="searchModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div class="bg-white rounded-3xl p-6 w-full max-w-md">
+                        <h3 class="text-xl font-bold mb-4">Search Hospitals</h3>
+                        <input type="text" id="searchInput" placeholder="Search by name or location..." class="w-full p-3 border border-gray-300 rounded-xl mb-4" oninput="performHospitalSearch()">
+                        <div id="searchResults" class="space-y-2 mb-4 max-h-64 overflow-y-auto">
+                            <p class="text-gray-500 text-center py-4">Enter search term to find hospitals...</p>
+                        </div>
+                        <button onclick="closeSearchModal()" class="w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-300">Close</button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', searchModal);
+        }
+        
+        function closeSearchModal() {
+            const modal = document.getElementById('searchModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        function performHospitalSearch() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!searchTerm) {
+                resultsDiv.innerHTML = '<p class="text-gray-500 text-center py-4">Enter search term to find hospitals...</p>';
+                return;
+            }
+            
+            // Demo search results
+            const hospitals = [
+                { name: 'City General Hospital', distance: '2.3 km', specialty: 'Emergency' },
+                { name: 'Medicare Clinic', distance: '1.8 km', specialty: 'General Practice' },
+                { name: 'Apollo Hospitals', distance: '3.5 km', specialty: 'Multi-specialty' },
+                { name: 'Fortis Healthcare', distance: '4.2 km', specialty: 'Cardiology' },
+                { name: 'Manipal Hospital', distance: '5.1 km', specialty: 'Orthopedics' },
+                { name: 'Max Hospital', distance: '6.0 km', specialty: 'Neurology' }
+            ];
+            
+            const filtered = hospitals.filter(h => 
+                h.name.toLowerCase().includes(searchTerm) || 
+                h.specialty.toLowerCase().includes(searchTerm)
+            );
+            
+            if (filtered.length === 0) {
+                resultsDiv.innerHTML = '<p class="text-gray-500 text-center py-4">No hospitals found</p>';
+                return;
+            }
+            
+            let html = '';
+            filtered.forEach(hospital => {
+                html += `
+                    <div class="p-3 border border-gray-200 rounded-xl">
+                        <div class="font-medium">${hospital.name}</div>
+                        <div class="text-sm text-gray-600">${hospital.distance} • ${hospital.specialty}</div>
+                        <button onclick="closeSearchModal(); bookAppointment('${hospital.name}', 'hospital')" class="mt-2 w-full bg-blue-500 text-white py-2 rounded-lg text-sm hover:bg-blue-600">
+                            Book Appointment
+                        </button>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
         }
 
         // Initialize app
